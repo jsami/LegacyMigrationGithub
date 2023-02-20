@@ -16,18 +16,7 @@ namespace BlazorWasm
             builder.Services.AddScoped(
                 sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-            //builder.Services.AddSingleton<INavigationInterception>(
-            //    sp => new DisableNavigationInterception());
-
             await builder.Build().RunAsync();
-        }
-    }
-
-    public class DisableNavigationInterception : INavigationInterception
-    {
-        public Task EnableNavigationInterceptionAsync()
-        {
-            return Task.CompletedTask;
         }
     }
 }
