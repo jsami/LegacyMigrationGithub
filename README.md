@@ -1,1 +1,1 @@
-A simple POC for migration from APS.NET Framework MVC to Blazor WebAssembly.
+A simple POC for migration from ASP.NET Framework MVC to Blazor WebAssembly.
