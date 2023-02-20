@@ -1,0 +1,14 @@
+﻿@model ViewModels.DataFeedViewModel
+
+@using MVCFx.Helpers;
+
+@{
+    ViewBag.Title = "Fetch Data";
+    ViewBag.Blazor = true;
+}
+
+@Html.ViewModel(Model)
+
+<div id="app">
+    <div class="loading-progress-text">Loading ...</div>
+</div>

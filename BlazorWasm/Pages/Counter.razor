@@ -1,0 +1,29 @@
+﻿@page "/home/contact"
+
+@inject HttpClient Http
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Increment</button>
+<button class="btn btn-primary" @onclick="CallWs">Call Web Service</button>
+
+@code {
+    private int currentCount = 0;
+
+
+    private void IncrementCount()
+    {
+        currentCount = currentCount+1;
+    }
+
+    private async Task CallWs()
+    {
+        var response = await Http.GetAsync("/api/coolservice/giveme");
+        Console.WriteLine(await response.Content.ReadAsStringAsync());
+    }
+
+}
