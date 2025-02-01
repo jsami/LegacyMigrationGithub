@@ -30,13 +30,33 @@ namespace MVCFx
         private static void  BuildRequestPipeline()
         {
             var services = new ServiceCollection();
+
+            services.AddLogging();
+
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = "localhost:6379";
+                options.InstanceName = "Session_";
+            });
+
+            services.AddSession(options =>
+            {
+                options.Cookie.Name = ".SharedSession";
+                options.IdleTimeout = TimeSpan.FromMinutes(30);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
+
             var serviceProvider = services.BuildServiceProvider();
 
             var builder = new ApplicationBuilder(serviceProvider);
-            builder.Use(async (context, next) =>
+
+            builder.UseSession();
+            
+            builder.Run((context) =>
             {
                 Console.WriteLine("It Works!");
-                await next();
+                return Task.CompletedTask;
             });
 
             _aspNetCorePipeline = builder.Build();
@@ -55,8 +75,8 @@ namespace MVCFx
                     context.Request.Headers["Cookie"] = cookieHeader;
                     context.Items["AspNetMvcContext"] = mvcContext;
                 }
-
-                _aspNetCorePipeline(context).GetAwaiter().GetResult();
+                
+                Task.Run(() =>  _aspNetCorePipeline(context)).GetAwaiter().GetResult();
             }
         }
     }
