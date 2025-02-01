@@ -1,20 +1,18 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Contexts;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Mvc;
 using System.Web.WebSockets;
+using Microsoft.AspNetCore.Session;
 
 namespace MVCFx.Controllers
 {
     public class HomeController : Controller
     {
-        protected override void OnResultExecuted(ResultExecutedContext filterContext)
-        {
-            Task.Run(() => SharedSession.CommitAsync()).GetAwaiter().GetResult();
-        }
-
         public ActionResult Index()
         {
             return View();
@@ -41,7 +39,7 @@ namespace MVCFx.Controllers
             }
         }
 
-        public async Task<ActionResult> Set(string userName)
+        public async Task<ActionResult> Set(string userName, CancellationToken ct = default)
         {
             SharedSession.SetString("username", userName);
             return Content("Session Set in .Net FX");

@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 namespace MVCCore.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
-    public class CoolServiceController : ControllerBase
+    public class CoolServiceController : Controller
     {
         [HttpGet("giveme")]
-        public IActionResult GiveMeResponse()
+        public ActionResult GiveMeResponse()
         {
-            return Ok(new { message = "This is your response! " });
+            HttpContext.Session.SetString("service", "cool");
+            return Content("This is your response! ");
         }
     }
 }

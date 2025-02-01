@@ -1,4 +1,6 @@
+using System.Reflection.Metadata;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.AspNetCore.DataProtection;
 using MVCCore.MiddleWare;
 
 namespace MVCCore
@@ -15,6 +17,11 @@ namespace MVCCore
 
             builder.Services.AddReverseProxy()
                 .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+            
+            builder.Services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo("C:\\SharedDataProtectionKeys"))
+                .SetApplicationName("SharedAppName")
+                .ProtectKeysWithDpapi();
 
             builder.Services.AddStackExchangeRedisCache(options =>
             {
@@ -61,6 +68,18 @@ namespace MVCCore
                 pattern: "{controller=Home}/{action=Index}/{id?}");
 
             app.MapFallbackToFile("index.html");
+
+            app.Use(async (ctx, next) =>
+            {
+                var statusKey = $"__session_init__{ctx.Session.Id}";
+                var status = ctx.Session.GetString(statusKey);
+                if (string.IsNullOrEmpty(status))
+                {
+                    await ctx.Session.LoadAsync();
+                    ctx.Session.SetString(statusKey, "OK");
+                }
+                await next(ctx);
+            });
 
             app.Run();
         }

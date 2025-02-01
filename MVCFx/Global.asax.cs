@@ -3,20 +3,35 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Builder.Internal;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace MVCFx
 {
     public class MvcApplication : System.Web.HttpApplication
     {
         private static RequestDelegate _aspNetCorePipeline;
+
+        public ISession SharedSession
+        {
+            get
+            {
+                var session = Context.Items["SharedSession"] as ISession;
+                if (session == null)
+                    throw new InvalidOperationException("Shared session not configured");
+                return session;
+            }
+        }
 
         protected void Application_Start()
         {
@@ -33,6 +48,11 @@ namespace MVCFx
 
             services.AddLogging();
 
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo("C:\\SharedDataProtectionKeys"))
+                .SetApplicationName("SharedAppName")
+                .ProtectKeysWithDpapi();
+
             services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = "localhost:6379";
@@ -43,8 +63,6 @@ namespace MVCFx
             {
                 options.Cookie.Name = ".SharedSession";
                 options.IdleTimeout = TimeSpan.FromMinutes(30);
-                options.Cookie.HttpOnly = true;
-                options.Cookie.IsEssential = true;
             });
 
             var serviceProvider = services.BuildServiceProvider();
@@ -53,13 +71,14 @@ namespace MVCFx
 
             builder.UseSession();
             
-            builder.Run((context) =>
+            builder.Run(context =>
             {
                 var mvcContext = context.Items["AspNetMvcContext"] as HttpContextBase;
                 if (mvcContext != null)
                 {
                     mvcContext.Items["SharedSession"] = context.Session;
                 }
+
                 return Task.CompletedTask;
             });
 
@@ -71,6 +90,7 @@ namespace MVCFx
             if (_aspNetCorePipeline != null)
             {
                 var context = new DefaultHttpContext();
+
                 HttpContextBase mvcContext = new HttpContextWrapper(Context);
                 context.Items["AspNetMvcContext"] = mvcContext;
 
@@ -82,6 +102,11 @@ namespace MVCFx
                 
                 Task.Run(() =>  _aspNetCorePipeline(context)).GetAwaiter().GetResult();
             }
+        }
+
+        protected void Application_EndRequest(object sender, EventArgs e)
+        {
+            Task.Run(() => SharedSession.CommitAsync()).GetAwaiter().GetResult();
         }
     }
 }
