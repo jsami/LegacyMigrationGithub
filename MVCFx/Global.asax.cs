@@ -55,7 +55,11 @@ namespace MVCFx
             
             builder.Run((context) =>
             {
-                Console.WriteLine("It Works!");
+                var mvcContext = context.Items["AspNetMvcContext"] as HttpContextBase;
+                if (mvcContext != null)
+                {
+                    mvcContext.Items["SharedSession"] = context.Session;
+                }
                 return Task.CompletedTask;
             });
 
@@ -68,12 +72,12 @@ namespace MVCFx
             {
                 var context = new DefaultHttpContext();
                 HttpContextBase mvcContext = new HttpContextWrapper(Context);
+                context.Items["AspNetMvcContext"] = mvcContext;
 
                 var cookieHeader = mvcContext.Request.Headers["Cookie"];
                 if (!string.IsNullOrEmpty(cookieHeader))
                 {
                     context.Request.Headers["Cookie"] = cookieHeader;
-                    context.Items["AspNetMvcContext"] = mvcContext;
                 }
                 
                 Task.Run(() =>  _aspNetCorePipeline(context)).GetAwaiter().GetResult();

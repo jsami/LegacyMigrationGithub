@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
+using System.Runtime.Remoting.Contexts;
+using System.Threading.Tasks;
 using System.Web.Mvc;
 using System.Web.WebSockets;
 
@@ -7,6 +10,11 @@ namespace MVCFx.Controllers
 {
     public class HomeController : Controller
     {
+        protected override void OnResultExecuted(ResultExecutedContext filterContext)
+        {
+            Task.Run(() => SharedSession.CommitAsync()).GetAwaiter().GetResult();
+        }
+
         public ActionResult Index()
         {
             return View();
@@ -22,30 +30,26 @@ namespace MVCFx.Controllers
             return View();
         }
 
-        protected HttpContext AspNetCoreContext
+        public ISession SharedSession
         {
             get
             {
-                var owinEnvironment = HttpContext.Items["owin.Environment"] as IDictionary<string, object>;
-                if (owinEnvironment != null)
-                {
-                    var context = owinEnvironment["AspNetCoreHttpContext"] as DefaultHttpContext;
-                    return context;
-                }
-
-                return null;
+                var session = HttpContext.Items["SharedSession"] as ISession;
+                if (session == null)
+                    throw new InvalidOperationException("Shared session not configured");
+                return session;
             }
         }
 
-        public ActionResult Set(string userName)
+        public async Task<ActionResult> Set(string userName)
         {
-            AspNetCoreContext?.Session.SetString("username", userName);
+            SharedSession.SetString("username", userName);
             return Content("Session Set in .Net FX");
         }
 
         public ActionResult GetSession()
         {
-            var userName = AspNetCoreContext?.Session.GetString("username");
+            var userName = SharedSession.GetString("username");
             return Content($"UserName from .Net FX Session: {userName}");
         }
     }
