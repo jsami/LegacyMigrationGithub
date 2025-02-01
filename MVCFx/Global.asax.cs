@@ -1,6 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Builder.Internal;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Optimization;
@@ -10,12 +16,48 @@ namespace MVCFx
 {
     public class MvcApplication : System.Web.HttpApplication
     {
+        private static RequestDelegate _aspNetCorePipeline;
+
         protected void Application_Start()
         {
             AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
+            BuildRequestPipeline();
+        }
+
+        private static void  BuildRequestPipeline()
+        {
+            var services = new ServiceCollection();
+            var serviceProvider = services.BuildServiceProvider();
+
+            var builder = new ApplicationBuilder(serviceProvider);
+            builder.Use(async (context, next) =>
+            {
+                Console.WriteLine("It Works!");
+                await next();
+            });
+
+            _aspNetCorePipeline = builder.Build();
+        }
+
+        protected void Application_BeginRequest(object sender, EventArgs e)
+        {
+            if (_aspNetCorePipeline != null)
+            {
+                var context = new DefaultHttpContext();
+                HttpContextBase mvcContext = new HttpContextWrapper(Context);
+
+                var cookieHeader = mvcContext.Request.Headers["Cookie"];
+                if (!string.IsNullOrEmpty(cookieHeader))
+                {
+                    context.Request.Headers["Cookie"] = cookieHeader;
+                    context.Items["AspNetMvcContext"] = mvcContext;
+                }
+
+                _aspNetCorePipeline(context).GetAwaiter().GetResult();
+            }
         }
     }
 }
